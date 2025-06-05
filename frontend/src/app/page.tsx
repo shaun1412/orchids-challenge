@@ -31,7 +31,32 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setClonedHtml(data.html);
+
+      // Process HTML to make image URLs absolute
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(data.html, 'text/html');
+
+      const imgTags = doc.querySelectorAll('img');
+      imgTags.forEach(img => {
+        const src = img.getAttribute('src');
+        if (src) {
+          try {
+            // Check if src is already absolute or data URL
+            if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('//') && !src.startsWith('data:')) {
+              // Construct absolute URL using the original website URL
+              const absoluteUrl = new URL(src, url).href; // Use the 'url' state variable
+              img.setAttribute('src', absoluteUrl);
+            }
+          } catch (e) {
+            console.error('Error converting relative URL:', src, e);
+            // Optionally remove the image or set a placeholder if conversion fails
+            // img.remove();
+          }
+        }
+      });
+
+      const modifiedHtml = new XMLSerializer().serializeToString(doc);
+      setClonedHtml(modifiedHtml);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
